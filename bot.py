@@ -4,6 +4,7 @@
 YouTube • Instagram • TikTok • Facebook • Twitter/X
 ─────────────────────────────────────────────────────
 ✅ بدون subprocess — يستخدم yt_dlp كمكتبة بايثون مباشرة
+✅ يتضمن Health Server للاستضافة المجانية على Render
 ⚡ Dev: @xuwjj — Marco
 """
 
@@ -16,6 +17,8 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from threading import Thread
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import yt_dlp
 
@@ -48,6 +51,21 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logger = logging.getLogger(__name__)
+
+# ──────────────────── Health Server (لـ Render Free) ────────────────────
+
+class HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
+    def log_message(self, format, *args):
+        pass
+
+def start_health_server():
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server.serve_forever()
 
 # ──────────────────── أنماط الروابط (Regex) ────────────────────
 PATTERNS = {
@@ -672,6 +690,10 @@ def main():
     print(f"✅ yt-dlp version: {yt_dlp.version.__version__}")
     print("✅ الوضع: مكتبة بايثون مباشرة (بدون subprocess)")
     print("⚡ Dev: @xuwjj — Marco")
+
+    # ✅ تشغيل Health Server للاستضافة المجانية
+    Thread(target=start_health_server, daemon=True).start()
+    print(f"✅ Health server started on port {os.environ.get('PORT', 10000)}")
 
     app = Application.builder().token(BOT_TOKEN).build()
 
