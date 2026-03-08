@@ -5,6 +5,7 @@ YouTube • Instagram • TikTok • Facebook • Twitter/X
 ─────────────────────────────────────────────────────
 ✅ بدون subprocess — يستخدم yt_dlp كمكتبة بايثون مباشرة
 ✅ يتضمن Health Server للاستضافة المجانية على Render
+✅ تخطي قيود تسجيل الدخول ليوتيوب
 ⚡ Dev: @xuwjj — Marco
 """
 
@@ -39,12 +40,24 @@ from telegram.ext import (
 from telegram.constants import ParseMode, ChatAction
 
 # ──────────────────── الإعدادات ────────────────────
-BOT_TOKEN = os.getenv("BOT_TOKEN", "7379445553:AAEOQo6_umHhSAd8c2ykKdV0ir3UYCAsiYc")
-ADMIN_IDS = list(map(int, os.getenv("ADMIN_IDS", "1647643509").split(",")))
+BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
+ADMIN_IDS = list(map(int, os.getenv("ADMIN_IDS", "123456789").split(",")))
 MAX_FILE_MB = 50
 STATS_FILE = "stats.json"
 
 executor = ThreadPoolExecutor(max_workers=4)
+
+# ✅ إعدادات مشتركة لتخطي قيود يوتيوب
+YDL_BASE_OPTS = {
+    "quiet": True,
+    "no_warnings": True,
+    "noplaylist": True,
+    "extractor_args": {"youtube": {"player_client": ["web"]}},
+    "http_headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+    },
+}
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -151,9 +164,7 @@ PLATFORM_NAMES = {
 def _extract_info_sync(url: str) -> dict | None:
     try:
         ydl_opts = {
-            "quiet": True,
-            "no_warnings": True,
-            "noplaylist": True,
+            **YDL_BASE_OPTS,
             "skip_download": True,
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -199,10 +210,8 @@ def _download_sync(
     output_template = os.path.join(output_dir, "%(title).60s.%(ext)s")
 
     ydl_opts = {
+        **YDL_BASE_OPTS,
         "outtmpl": output_template,
-        "quiet": True,
-        "no_warnings": True,
-        "noplaylist": True,
     }
 
     if mode == "mp3":
@@ -294,9 +303,9 @@ def _parse_error(error_msg: str) -> str:
     if "geo" in lower:
         return "🌍 المحتوى محظور في منطقتك"
     if "login" in lower or "sign in" in lower:
-        return "🔑 المحتوى يتطلب تسجيل دخول"
+        return "🔑 المحتوى يتطلب تسجيل دخول — جرب رابط ثاني"
     if "ffmpeg" in lower:
-        return "⚠️ يجب تثبيت ffmpeg — حمّله من ffmpeg.org وأضفه لـ PATH"
+        return "⚠️ يجب تثبيت ffmpeg"
     return f"⚠️ خطأ في التحميل:\n<code>{error_msg[:200]}</code>"
 
 
